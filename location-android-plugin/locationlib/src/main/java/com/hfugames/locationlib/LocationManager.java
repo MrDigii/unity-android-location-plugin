@@ -1,10 +1,26 @@
 package com.hfugames.locationlib;
 
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import com.unity3d.player.UnityPlayer;
 
 public class LocationManager
 {
+    public static final String CHANNEL_ID = "LocationServiceChannel";
+    static Activity myActivity;
+
+    // Called From C# to get the Activity Instance
+    public static void receiveActivityInstance(Activity tempActivity) {
+        myActivity = tempActivity;
+    }
+
+    public static void startLocationService() {
+        myActivity.startService(new Intent(myActivity, LocationIntentService.class));
+    }
+
     public void LogNativeLogcatMessage()
     {
         Log.d("Unity", "Native Logcat Message");
