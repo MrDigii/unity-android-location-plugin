@@ -11,11 +11,13 @@ public class LocationIntentService extends IntentService {
 
     private static final String TAG = "LocationIntentService";
     private PowerManager.WakeLock wakeLock;
+    private boolean isRunning = false;
 
     public LocationIntentService()
     {
         super(TAG);
-        setIntentRedelivery(true);
+        // should service be restarted on if activity is turn on again
+        // setIntentRedelivery(true);
     }
 
     @Override
@@ -38,8 +40,10 @@ public class LocationIntentService extends IntentService {
     protected void onHandleIntent(@Nullable Intent intent)
     {
         Log.d(TAG,"onHandleIntent");
+        isRunning = true;
 
-        for (int i= 0; i < 10; i++) {
+        for (int i= 0; i < 10000; i++) {
+            if (!isRunning) break;
             Log.d(TAG, i + "");
             SystemClock.sleep(1000);
 
@@ -49,6 +53,8 @@ public class LocationIntentService extends IntentService {
     @Override
     public void onDestroy()
     {
+        // working threads or other work in onHandleIntent must be shut down in this method
+        isRunning = false;
         super.onDestroy();
         Log.d(TAG, "onDestroy");
         wakeLock.release();

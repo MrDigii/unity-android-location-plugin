@@ -10,15 +10,24 @@ import com.unity3d.player.UnityPlayer;
 public class LocationManager
 {
     public static final String CHANNEL_ID = "LocationServiceChannel";
-    static Activity myActivity;
+    private static Activity myActivity;
+    private static Intent currentIntent;
 
     // Called From C# to get the Activity Instance
     public static void receiveActivityInstance(Activity tempActivity) {
         myActivity = tempActivity;
     }
 
-    public static void startLocationService() {
-        myActivity.startService(new Intent(myActivity, LocationIntentService.class));
+    public static void startLocationService()
+    {
+        stopLocationService();
+        currentIntent = new Intent(myActivity, LocationIntentService.class);
+        myActivity.startService(currentIntent);
+    }
+
+    public static void stopLocationService()
+    {
+        if (currentIntent != null) myActivity.stopService(currentIntent);
     }
 
     public void LogNativeLogcatMessage()

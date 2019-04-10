@@ -21,8 +21,8 @@ public class LocationManager : MonoBehaviour
         javaClass.Call("LogNumberSentFromUnity", 20);
         numberText.text = javaClass.Call<int>("AddToNumber", 10, 5).ToString();
 
-        //Now, start service
-        StartService();
+        // Now, start service
+        // StartService();
     }
 
     private void SendActivityReference(string packageName)
@@ -35,6 +35,11 @@ public class LocationManager : MonoBehaviour
     public void StartService()
     {
         javaClass.CallStatic("startLocationService");
+    }
+
+    public void StopService()
+    {
+        javaClass.CallStatic("stopLocationService");
     }
 
     public void CallAOrBInJava(string _value)
@@ -50,5 +55,10 @@ public class LocationManager : MonoBehaviour
     public void ChangeTextToB(string _value)
     {
         numberText.text = "B: " + _value;
+    }
+
+    void OnApplicationQuit()
+    {
+        StopService();
     }
 }
