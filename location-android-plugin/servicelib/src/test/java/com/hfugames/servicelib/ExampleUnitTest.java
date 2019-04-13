@@ -1,4 +1,4 @@
-package com.hfugames.locationlib;
+package com.hfugames.servicelib;
 
 import org.junit.Test;
 

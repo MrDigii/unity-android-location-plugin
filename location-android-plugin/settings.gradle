@@ -1,1 +1,1 @@
-include ':app', ':locationlib'
+include ':app', ':servicelib'

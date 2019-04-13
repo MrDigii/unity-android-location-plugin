@@ -1,4 +1,4 @@
-package com.hfugames.locationlib;
+package com.hfugames.servicelib;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;

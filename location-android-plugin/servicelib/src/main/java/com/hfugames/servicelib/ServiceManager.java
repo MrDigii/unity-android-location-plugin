@@ -1,33 +1,38 @@
-package com.hfugames.locationlib;
+package com.hfugames.servicelib;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
-import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import com.unity3d.player.UnityPlayer;
 
-public class LocationManager
+public class ServiceManager
 {
     public static final String CHANNEL_ID = "LocationServiceChannel";
-    private static Activity myActivity;
+
+    private static Activity unityActivity;
+    private static String unityClassName;
     private static Intent currentIntent;
 
-    // Called From C# to get the Activity Instance
-    public static void receiveActivityInstance(Activity tempActivity) {
-        myActivity = tempActivity;
+    // Set unity activity instance
+    public static void setUnityActivityInstance(Activity _unityActivity) {
+        unityActivity = _unityActivity;
+    }
+
+    // Set unity class reference
+    public static void setUnityClassName(String _className) {
+       unityClassName = _className;
     }
 
     public static void startLocationService()
     {
         stopLocationService();
-        currentIntent = new Intent(myActivity, LocationIntentService.class);
-        myActivity.startService(currentIntent);
+        currentIntent = new Intent(unityActivity, LocationIntentService.class);
+        unityActivity.startService(currentIntent);
     }
 
     public static void stopLocationService()
     {
-        if (currentIntent != null) myActivity.stopService(currentIntent);
+        if (currentIntent != null) unityActivity.stopService(currentIntent);
     }
 
     public void LogNativeLogcatMessage()
@@ -56,11 +61,11 @@ public class LocationManager
 
     public void DoSomethingA()
     {
-        UnityPlayer.UnitySendMessage("LocationManager", "ChangeTextToA", "2");
+        UnityPlayer.UnitySendMessage(unityClassName, "ChangeTextToA", "2");
     }
 
     public void DoSomethingB()
     {
-        UnityPlayer.UnitySendMessage("LocationManager", "ChangeTextToB", "3");
+        UnityPlayer.UnitySendMessage(unityClassName, "ChangeTextToB", "3");
     }
 }
