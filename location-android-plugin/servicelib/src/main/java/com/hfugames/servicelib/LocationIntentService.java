@@ -1,11 +1,16 @@
 package com.hfugames.servicelib;
 
 import android.app.IntentService;
+import android.app.Notification;
 import android.content.Intent;
 import android.os.PowerManager;
 import android.os.SystemClock;
 import android.support.annotation.Nullable;
+import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+
+import static com.hfugames.servicelib.ServiceManager.SERVICE_CHANNEL_ID;
+import static com.hfugames.servicelib.ServiceManager.INTENT_FOREGROUND_EXTRA_NAME;
 
 public class LocationIntentService extends IntentService {
 
@@ -16,8 +21,7 @@ public class LocationIntentService extends IntentService {
     public LocationIntentService()
     {
         super(TAG);
-        // should service be restarted on if activity is turn on again
-        // setIntentRedelivery(true);
+        setIntentRedelivery(false);
     }
 
     @Override
@@ -32,14 +36,26 @@ public class LocationIntentService extends IntentService {
 
         wakeLock.acquire();
         Log.d(TAG, "wakeClock acquired!");
-
-        // startForeground();
     }
 
     @Override
     protected void onHandleIntent(@Nullable Intent intent)
     {
         Log.d(TAG,"onHandleIntent");
+
+        if (intent.getBooleanExtra(INTENT_FOREGROUND_EXTRA_NAME, false)) {
+            // create notification
+            Notification notification = new NotificationCompat.Builder(this, SERVICE_CHANNEL_ID)
+                    .setContentTitle("Location Service")
+                    .setContentText("Service Running...")
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                    .build();
+
+            // start as foreground service
+            startForeground(1, notification);
+        }
+
         isRunning = true;
 
         for (int i= 0; i < 10000; i++) {
@@ -53,11 +69,12 @@ public class LocationIntentService extends IntentService {
     @Override
     public void onDestroy()
     {
+        super.onDestroy();
+        stopForeground(true);
         // working threads or other work in onHandleIntent must be shut down in this method
         isRunning = false;
-        super.onDestroy();
-        Log.d(TAG, "onDestroy");
         wakeLock.release();
         Log.d(TAG, "wakeClock released!");
+        Log.d(TAG, "onDestroy");
     }
 }
