@@ -67,7 +67,8 @@ public class ServiceManager
         stopLocationService();
         currentIntent = new Intent(unityActivity, LocationIntentService.class);
         currentIntent.putExtra(INTENT_FOREGROUND_EXTRA_NAME, _asForeground);
-        unityActivity.startService(currentIntent);
+        // unityActivity.startService(currentIntent);
+        LocationIntentService.enqueueWork(unityActivity, currentIntent);
     }
 
     public static void stopLocationService() {
