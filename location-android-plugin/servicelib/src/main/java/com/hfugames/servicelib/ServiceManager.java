@@ -5,6 +5,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Intent;
 import android.os.Build;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import com.unity3d.player.UnityPlayer;
 
@@ -65,9 +66,10 @@ public class ServiceManager
     public static void startLocationService(boolean _asForeground)
     {
         stopLocationService();
-        currentIntent = new Intent(unityActivity, LocationIntentService.class);
+        currentIntent = new Intent(unityActivity, LocationService.class);
         currentIntent.putExtra(INTENT_FOREGROUND_EXTRA_NAME, _asForeground);
-        unityActivity.startService(currentIntent);
+        // unityActivity.startService(currentIntent);
+        ContextCompat.startForegroundService(unityActivity, currentIntent);
     }
 
     public static void stopLocationService() {

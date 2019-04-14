@@ -10,8 +10,10 @@
           </intent-filter>
           <meta-data android:name="unityplayer.UnityActivity" android:value="true" />
         </activity>
-	<service android:name="com.hfugames.servicelib.LocationIntentService" />
+	<service android:name="com.hfugames.servicelib.LocationService" />
     </application>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 </manifest>
