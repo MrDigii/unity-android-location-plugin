@@ -1,19 +1,25 @@
 package com.hfugames.servicelib;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Intent;
 import android.os.Build;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import com.unity3d.player.UnityPlayer;
+import com.unity3d.player.UnityPlayerActivity;
 
 public class ServiceManager
 {
     public static final String SERVICE_CHANNEL_ID = "ServiceChannel";
     public static final String NOTIFICATION_CHANNEL_ID = "NotificationChannel";
     public static final String INTENT_FOREGROUND_EXTRA_NAME = "startAsForeground";
+    private static final int REQUEST_CODE = 1000;
 
     private static Activity unityActivity;
     private static String unityClassName;
@@ -32,6 +38,17 @@ public class ServiceManager
     public static void setupServiceManager() {
         // create notification channels for API >= 26
         createNotificationChannels();
+
+        /*
+        if (ActivityCompat.shouldShowRequestPermissionRationale(unityActivity, Manifest.permission.ACCESS_FINE_LOCATION))
+        {
+            ActivityCompat.requestPermissions(unityActivity, new String[] {
+                    Manifest.permission.ACCESS_FINE_LOCATION
+            }, REQUEST_CODE);
+        } else {
+
+        }
+        */
     }
 
     // Set notification channel for API Level >= 26
@@ -65,14 +82,16 @@ public class ServiceManager
 
     public static void startLocationService(boolean _asForeground)
     {
+        /*
         stopLocationService();
         currentIntent = new Intent(unityActivity, LocationService.class);
         currentIntent.putExtra(INTENT_FOREGROUND_EXTRA_NAME, _asForeground);
         // unityActivity.startService(currentIntent);
         ContextCompat.startForegroundService(unityActivity, currentIntent);
+        */
     }
 
     public static void stopLocationService() {
-        if (currentIntent != null) unityActivity.stopService(currentIntent);
+        // if (currentIntent != null) unityActivity.stopService(currentIntent);
     }
 }

@@ -32,6 +32,7 @@ public class ServiceManager : MonoBehaviour
         unityJavaClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
         unityJavaActivity = unityJavaClass.GetStatic<AndroidJavaObject>("currentActivity");
         serviceJavaClass.CallStatic("setUnityActivityInstance", unityJavaActivity);
+        unityJavaActivity.Call("startLocationService");
     }
 
     private void SetUnityClassName()
