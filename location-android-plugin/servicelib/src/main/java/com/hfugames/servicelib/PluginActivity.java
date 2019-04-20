@@ -3,6 +3,7 @@ package com.hfugames.servicelib;
 import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
 import android.os.Looper;
 import android.support.annotation.NonNull;
@@ -17,6 +18,8 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.unity3d.player.UnityPlayerActivity;
 
+import java.text.MessageFormat;
+
 public class PluginActivity extends UnityPlayerActivity {
     private static final String TAG = "LocationServicePlugin";
     private static final int REQUEST_CODE = 1000;
@@ -25,27 +28,32 @@ public class PluginActivity extends UnityPlayerActivity {
     private FusedLocationProviderClient fusedLocationProviderClient;
     private LocationRequest locationRequest;
     private LocationCallback locationCallback;
+    private boolean islocationServiceStarted;
 
 
     protected void onCreate(Bundle savedInstanceState) {
         // call UnityPlayerActivity.onCreate()
         super.onCreate(savedInstanceState);
-        // print debug message to logcat
         Log.d(TAG, "onCreate called!");
-
-
     }
 
-    private void startPlugin() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(unityActivity, Manifest.permission.ACCESS_FINE_LOCATION)) {
-            ActivityCompat.requestPermissions(unityActivity, new String[]{
-                    Manifest.permission.ACCESS_FINE_LOCATION
-            }, REQUEST_CODE);
-        } else {
-            // If permission is granted
-            buildLocationRequest();
-            buildLocationCallback();
-            fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(unityActivity);
+
+    private void initPlugin() {
+        try {
+            if (unityActivity == null) throw new Exception("Undefined UnityActivity!");
+
+            if (ActivityCompat.shouldShowRequestPermissionRationale(unityActivity, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                ActivityCompat.requestPermissions(unityActivity, new String[]{
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                }, REQUEST_CODE);
+            } else {
+                // If permission is granted
+                buildLocationRequest();
+                buildLocationCallback();
+                fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(unityActivity);
+            }
+        } catch(Exception _e) {
+            Log.e(TAG, _e.getMessage());
         }
     }
 
@@ -54,14 +62,18 @@ public class PluginActivity extends UnityPlayerActivity {
     }
 
     private void buildLocationCallback() {
-
-        locationCallback = new LocationCallback() {
-            @Override
-            public void onLocationResult(LocationResult _locationResult) {
-                Log.d(TAG, "Location received!");
-            }
-        };
-
+        try {
+            if (unityActivity == null) throw new Exception("Undefined UnityActivity!");
+            locationCallback = new LocationCallback() {
+                @Override
+                public void onLocationResult(LocationResult _locationResult) {
+                    Location lastLocation = _locationResult.getLastLocation();
+                    Log.d(TAG, MessageFormat.format("Location received: Lat {0} Lng {1}.", lastLocation.getLatitude(), lastLocation.getLongitude()));
+                }
+            };
+        } catch(Exception _e) {
+            Log.e(TAG, _e.getMessage());
+        }
     }
 
     private void buildLocationRequest() {
@@ -71,7 +83,6 @@ public class PluginActivity extends UnityPlayerActivity {
         locationRequest.setInterval(5000);
         locationRequest.setFastestInterval(3000);
         locationRequest.setSmallestDisplacement(10);
-
     }
 
     @Override
@@ -98,18 +109,31 @@ public class PluginActivity extends UnityPlayerActivity {
     }
 
     public void startLocationService() {
-        Log.d(TAG, "Start location service...");
-        if (ActivityCompat.checkSelfPermission(unityActivity, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(unityActivity, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(unityActivity, new String[]{
-                    Manifest.permission.ACCESS_FINE_LOCATION
-            }, REQUEST_CODE);
-        } else {
-            fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
+        try {
+            Log.d(TAG, "Start location service...");
+            if (islocationServiceStarted) throw new Exception("Location Service already running!");
+            if (unityActivity == null) throw new Exception("Undefined UnityActivity!");
+
+            if (ActivityCompat.checkSelfPermission(unityActivity, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(unityActivity, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(unityActivity, new String[]{
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                }, REQUEST_CODE);
+            } else {
+                fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
+                islocationServiceStarted = true;
+            }
+        } catch (Exception _e) {
+            Log.e(TAG, _e.getMessage());
         }
     }
 
     public void stopLocationService() {
-        Log.d(TAG, "Stop location service...");
-        fusedLocationProviderClient.removeLocationUpdates(locationCallback);
+        try {
+            Log.d(TAG, "Stop location service...");
+            islocationServiceStarted = false;
+            fusedLocationProviderClient.removeLocationUpdates(locationCallback);
+        } catch (Exception _e) {
+            Log.e(TAG, _e.getMessage());
+        }
     }
 }

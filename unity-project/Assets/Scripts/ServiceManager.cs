@@ -8,19 +8,13 @@ public class ServiceManager : MonoBehaviour
     private AndroidJavaObject pluginJavaClass;
     private AndroidJavaClass unityJavaClass;
     private AndroidJavaObject unityJavaActivity;
-    private string servicePackagePath = "com.hfugames.servicelib.ServiceManager";
 
-    [SerializeField]
-    private Text numberText;
-
-    // Start is called before the first frame update
     void Start()
     {
         // setup class references between unity and android service module
         SetUnityActivityReference();
-        StartServicePlugin();
+        InitServicePlugin();
         // SetUnityClassName();
-        // serviceJavaClass.CallStatic("setupServiceManager");
     }
 
     /// <summary>
@@ -34,9 +28,9 @@ public class ServiceManager : MonoBehaviour
         GetPluginClass().CallStatic("setUnityAcitvityContext", unityJavaActivity);
     }
 
-    private void StartServicePlugin()
+    private void InitServicePlugin()
     {
-        GetPluginClass().Call("startPlugin");
+        GetPluginClass().Call("initPlugin");
     }
 
     private void SetUnityClassName()
@@ -54,7 +48,7 @@ public class ServiceManager : MonoBehaviour
         GetPluginClass().Call("stopLocationService");
     }
 
-    public AndroidJavaObject GetAndroidActivity()
+    private AndroidJavaObject GetAndroidActivity()
     {
         if (unityJavaClass == null || unityJavaActivity == null)
         {
@@ -64,7 +58,7 @@ public class ServiceManager : MonoBehaviour
         return unityJavaActivity;
     }
 
-    public AndroidJavaObject GetPluginClass()
+    private AndroidJavaObject GetPluginClass()
     {
         if (pluginJavaClass == null)
         {
