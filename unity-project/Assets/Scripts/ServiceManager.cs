@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 public class ServiceManager : MonoBehaviour
 {
-    private AndroidJavaObject serviceJavaClass;
+    private AndroidJavaObject pluginJavaClass;
     private AndroidJavaClass unityJavaClass;
     private AndroidJavaObject unityJavaActivity;
     private string servicePackagePath = "com.hfugames.servicelib.ServiceManager";
@@ -17,37 +17,60 @@ public class ServiceManager : MonoBehaviour
     void Start()
     {
         // setup class references between unity and android service module
-        serviceJavaClass = new AndroidJavaObject(servicePackagePath);
-        SetUnityActivityReference(servicePackagePath);
-        SetUnityClassName();
-        serviceJavaClass.CallStatic("setupServiceManager");
+        SetUnityActivityReference();
+        StartServicePlugin();
+        // SetUnityClassName();
+        // serviceJavaClass.CallStatic("setupServiceManager");
     }
 
     /// <summary>
     /// Send unity activity reference to java service package
     /// </summary>
     /// <param name="packageName"></param>
-    private void SetUnityActivityReference(string packageName)
+    private void SetUnityActivityReference()
     {
         unityJavaClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
         unityJavaActivity = unityJavaClass.GetStatic<AndroidJavaObject>("currentActivity");
-        serviceJavaClass.CallStatic("setUnityActivityInstance", unityJavaActivity);
-        unityJavaActivity.Call("startLocationService");
+        GetPluginClass().CallStatic("setUnityAcitvityContext", unityJavaActivity);
+    }
+
+    private void StartServicePlugin()
+    {
+        GetPluginClass().Call("startPlugin");
     }
 
     private void SetUnityClassName()
     {
-        serviceJavaClass.CallStatic("setUnityClassName", this.gameObject.name);
+        pluginJavaClass.CallStatic("setUnityClassName", this.gameObject.name);
     }
 
-    public void StartService(bool _asForeground)
+    public void StartService()
     {
-        serviceJavaClass.CallStatic("startLocationService", _asForeground);
+        GetPluginClass().Call("startLocationService");
     }
 
     public void StopService()
     {
-        serviceJavaClass.CallStatic("stopLocationService");
+        GetPluginClass().Call("stopLocationService");
+    }
+
+    public AndroidJavaObject GetAndroidActivity()
+    {
+        if (unityJavaClass == null || unityJavaActivity == null)
+        {
+            unityJavaClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+            unityJavaActivity = unityJavaClass.GetStatic<AndroidJavaObject>("currentActivity");
+        }
+        return unityJavaActivity;
+    }
+
+    public AndroidJavaObject GetPluginClass()
+    {
+        if (pluginJavaClass == null)
+        {
+            pluginJavaClass = new AndroidJavaObject("com.hfugames.servicelib.PluginActivity");
+        }
+        return pluginJavaClass;
     }
 
     void OnApplicationQuit()

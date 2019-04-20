@@ -1,6 +1,7 @@
 package com.hfugames.servicelib;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Looper;
@@ -19,6 +20,7 @@ import com.unity3d.player.UnityPlayerActivity;
 public class PluginActivity extends UnityPlayerActivity {
     private static final String TAG = "LocationServicePlugin";
     private static final int REQUEST_CODE = 1000;
+    private static Activity unityActivity;
 
     private FusedLocationProviderClient fusedLocationProviderClient;
     private LocationRequest locationRequest;
@@ -31,16 +33,24 @@ public class PluginActivity extends UnityPlayerActivity {
         // print debug message to logcat
         Log.d(TAG, "onCreate called!");
 
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
-            ActivityCompat.requestPermissions(this, new String[]{
+
+    }
+
+    private void startPlugin() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(unityActivity, Manifest.permission.ACCESS_FINE_LOCATION)) {
+            ActivityCompat.requestPermissions(unityActivity, new String[]{
                     Manifest.permission.ACCESS_FINE_LOCATION
             }, REQUEST_CODE);
         } else {
             // If permission is granted
             buildLocationRequest();
             buildLocationCallback();
-            fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+            fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(unityActivity);
         }
+    }
+
+    private static void setUnityAcitvityContext(Activity _context) {
+        unityActivity = _context;
     }
 
     private void buildLocationCallback() {
@@ -89,16 +99,17 @@ public class PluginActivity extends UnityPlayerActivity {
 
     public void startLocationService() {
         Log.d(TAG, "Start location service...");
-        if (ActivityCompat.checkSelfPermission(PluginActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(PluginActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(PluginActivity.this, new String[]{
+        if (ActivityCompat.checkSelfPermission(unityActivity, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(unityActivity, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(unityActivity, new String[]{
                     Manifest.permission.ACCESS_FINE_LOCATION
             }, REQUEST_CODE);
-            return;
+        } else {
+            fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
         }
-        fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
     }
 
     public void stopLocationService() {
+        Log.d(TAG, "Stop location service...");
         fusedLocationProviderClient.removeLocationUpdates(locationCallback);
     }
 }
