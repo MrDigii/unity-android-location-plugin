@@ -16,6 +16,7 @@ import com.google.android.gms.location.LocationRequest;
 
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.unity3d.player.UnityPlayer;
 import com.unity3d.player.UnityPlayerActivity;
 
 import java.text.MessageFormat;
@@ -24,11 +25,12 @@ public class PluginActivity extends UnityPlayerActivity {
     private static final String TAG = "LocationServicePlugin";
     private static final int REQUEST_CODE = 1000;
     private static Activity unityActivity;
+    private static String unityClassName;
 
     private FusedLocationProviderClient fusedLocationProviderClient;
     private LocationRequest locationRequest;
     private LocationCallback locationCallback;
-    private boolean islocationServiceStarted;
+    private boolean isLocationServiceRunning;
 
 
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,6 +39,10 @@ public class PluginActivity extends UnityPlayerActivity {
         Log.d(TAG, "onCreate called!");
     }
 
+    // Set unity class reference
+    public void setUnityClassName(String _className) {
+        unityClassName = _className;
+    }
 
     private void initPlugin() {
         try {
@@ -57,7 +63,7 @@ public class PluginActivity extends UnityPlayerActivity {
         }
     }
 
-    private static void setUnityAcitvityContext(Activity _context) {
+    private void setUnityAcitvityContext(Activity _context) {
         unityActivity = _context;
     }
 
@@ -68,7 +74,9 @@ public class PluginActivity extends UnityPlayerActivity {
                 @Override
                 public void onLocationResult(LocationResult _locationResult) {
                     Location lastLocation = _locationResult.getLastLocation();
-                    Log.d(TAG, MessageFormat.format("Location received: Lat {0} Lng {1}.", lastLocation.getLatitude(), lastLocation.getLongitude()));
+                    String locationMsg = MessageFormat.format("Location received: Lat {0} Lng {1}.", lastLocation.getLatitude(), lastLocation.getLongitude());
+                    Log.d(TAG, locationMsg);
+                    UnityPlayer.UnitySendMessage(unityClassName, "OnLocationReceived", locationMsg);
                 }
             };
         } catch(Exception _e) {
@@ -102,16 +110,10 @@ public class PluginActivity extends UnityPlayerActivity {
         }
     }
 
-
-    public void onBackPressed() {
-        // instead of calling UnityPlayerActivity.onBackPressed() we just ignore the back button event
-        // super.onBackPressed();
-    }
-
     public void startLocationService() {
         try {
             Log.d(TAG, "Start location service...");
-            if (islocationServiceStarted) throw new Exception("Location Service already running!");
+            if (isLocationServiceRunning) throw new Exception("Location Service already running!");
             if (unityActivity == null) throw new Exception("Undefined UnityActivity!");
 
             if (ActivityCompat.checkSelfPermission(unityActivity, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(unityActivity, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -120,7 +122,7 @@ public class PluginActivity extends UnityPlayerActivity {
                 }, REQUEST_CODE);
             } else {
                 fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
-                islocationServiceStarted = true;
+                isLocationServiceRunning = true;
             }
         } catch (Exception _e) {
             Log.e(TAG, _e.getMessage());
@@ -130,10 +132,19 @@ public class PluginActivity extends UnityPlayerActivity {
     public void stopLocationService() {
         try {
             Log.d(TAG, "Stop location service...");
-            islocationServiceStarted = false;
+            isLocationServiceRunning = false;
             fusedLocationProviderClient.removeLocationUpdates(locationCallback);
         } catch (Exception _e) {
             Log.e(TAG, _e.getMessage());
         }
+    }
+
+    public boolean isLocationServiceRunning() {
+        return isLocationServiceRunning;
+    }
+
+    public void onBackPressed() {
+        // instead of calling UnityPlayerActivity.onBackPressed() we just ignore the back button event
+        // super.onBackPressed();
     }
 }
