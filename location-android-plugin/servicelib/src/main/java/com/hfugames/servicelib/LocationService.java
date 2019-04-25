@@ -5,6 +5,7 @@ import android.app.Service;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Looper;
@@ -15,6 +16,7 @@ import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationAvailability;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
@@ -24,11 +26,15 @@ public class LocationService extends Service {
 
     private static final String TAG = "LocationService";
     private Messenger messageHandler;
+    private final IBinder mBinder = new LocationBinder();
 
     private FusedLocationProviderClient fusedLocationProviderClient;
     private LocationRequest locationRequest;
     private LocationCallback locationCallback;
     private Location lastLocation;
+    private int interval;
+    private int fastestInterval;
+    private int smallestDisplacement;
 
 
     @Override
@@ -45,6 +51,9 @@ public class LocationService extends Service {
             Log.d(TAG, "Start location service...");
             Bundle extras = _intent.getExtras();
             messageHandler = (Messenger) extras.get("MESSENGER");
+            interval = (int) extras.get("INTERVAL");
+            fastestInterval = (int) extras.get("FASTEST_INTERVAL");
+            smallestDisplacement = (int) extras.get("SMALLEST_DISPLACEMENT");
 
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 return START_NOT_STICKY;
@@ -60,7 +69,6 @@ public class LocationService extends Service {
     public void onDestroy()
     {
         try {
-            Log.d(TAG, "Stop location service...");
             fusedLocationProviderClient.removeLocationUpdates(locationCallback);
         } catch (Exception _e) {
             Log.e(TAG, _e.getMessage());
@@ -71,7 +79,18 @@ public class LocationService extends Service {
     @Nullable
     @Override
     public IBinder onBind(Intent _intent) {
-        return null;
+        return mBinder;
+    }
+
+    // singelton pattern
+    public class LocationBinder extends Binder {
+        LocationService getService() {
+            return LocationService.this;
+        }
+    }
+
+    public Location getLastLocation() {
+        return lastLocation;
     }
 
     private void buildLocationCallback() {
@@ -81,6 +100,11 @@ public class LocationService extends Service {
                 public void onLocationResult(LocationResult _locationResult) {
                     lastLocation = _locationResult.getLastLocation();
                     sendMessageToActivity(0, lastLocation);
+                }
+
+                @Override
+                public void onLocationAvailability(LocationAvailability _locationAvailability) {
+                    sendMessageToActivity(1, _locationAvailability.isLocationAvailable());
                 }
             };
         } catch(Exception _e) {
@@ -92,9 +116,9 @@ public class LocationService extends Service {
 
         locationRequest = LocationRequest.create();
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        locationRequest.setInterval(5000);
-        locationRequest.setFastestInterval(3000);
-        locationRequest.setSmallestDisplacement(10);
+        locationRequest.setInterval(interval);
+        locationRequest.setFastestInterval(fastestInterval);
+        locationRequest.setSmallestDisplacement(smallestDisplacement);
     }
 
     private void sendMessageToActivity(int _type, Object _msg) {
@@ -105,6 +129,12 @@ public class LocationService extends Service {
                     Location lastLocation = (Location)_msg;
                     message.arg1 = _type;
                     message.obj = lastLocation;
+                    messageHandler.send(message);
+                    break;
+                case 1:
+                    boolean locationAvailable = (boolean)_msg;
+                    message.arg1 = _type;
+                    message.obj = locationAvailable;
                     messageHandler.send(message);
                     break;
             }

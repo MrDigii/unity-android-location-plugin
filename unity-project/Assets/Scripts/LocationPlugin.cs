@@ -1,12 +1,30 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+
+public struct Location
+{
+    public double latitude;
+    public double longitude;
+    public double altitude;
+    public double accuracy;
+    public double bearing;
+    public double speed;
+    public string provider;
+}
 
 public class LocationPlugin : MonoBehaviour
 {
     protected AndroidJavaObject pluginJavaClass;
     protected AndroidJavaClass unityJavaClass;
     protected AndroidJavaObject unityJavaActivity;
+
+    // events
+    public delegate void LocationHandler(Location _location);
+    public delegate void LocationAvailabilityHandler(bool _isAvailable);
+    public event LocationHandler OnLocation;
+    public event LocationAvailabilityHandler OnAvailability;
 
     private void Awake()
     {
@@ -36,12 +54,17 @@ public class LocationPlugin : MonoBehaviour
         pluginJavaClass.Call("setUnityClassName", this.gameObject.name);
     }
 
+    public void OnStartLocationServiceBtn()
+    {
+        StartLocationService(5000, 3000, 10);
+    }
+
     /// <summary>
     /// Start google player location service
     /// </summary>
-    public void StartLocationService()
+    public void StartLocationService(int _interval, int _fastestInterval, int _smallestDisplacement)
     {
-        GetPluginClass().Call("startLocationService");
+        GetPluginClass().Call("startLocationService", _interval, _fastestInterval, _smallestDisplacement);
     }
 
     /// <summary>
@@ -57,9 +80,61 @@ public class LocationPlugin : MonoBehaviour
         return GetPluginClass().Call<bool>("isLocationServiceRunning");
     }
 
-    protected virtual void OnLocationReceived(string _locationData)
+    public Location LastLocation
     {
-        
+        get
+        {
+            Location lastLocation = new Location();
+            lastLocation.latitude = GetPluginClass().Call<double>("getLatitude");
+            lastLocation.longitude = GetPluginClass().Call<double>("getLongitude");
+            lastLocation.altitude = GetPluginClass().Call<double>("getAltitude");
+            lastLocation.accuracy = GetPluginClass().Call<double>("getAccuracy");
+            lastLocation.bearing = GetPluginClass().Call<double>("getBearing");
+            lastLocation.speed = GetPluginClass().Call<double>("getSpeed");
+            lastLocation.provider = GetPluginClass().Call<string>("getProvider");
+            return lastLocation;
+        }        
+    }
+
+    public bool HasAltitude()
+    {
+        return GetPluginClass().Call<bool>("hasAltitude");
+    }
+
+    public bool HasAccuracy()
+    {
+        return GetPluginClass().Call<bool>("hasAccuracy");
+    }
+
+    public bool HasBearing()
+    {
+        return GetPluginClass().Call<bool>("hasBearing");
+    }
+
+    public bool HasSpeed()
+    {
+        return GetPluginClass().Call<bool>("hasSpeed");
+    }
+
+    private void OnLocationReceived(string _locationData)
+    {
+        Location location = new Location();
+        System.Globalization.CultureInfo cultureInfo = System.Globalization.CultureInfo.InvariantCulture;
+        string[] splittedLocationString = _locationData.Split(':');
+        location.latitude = double.Parse(splittedLocationString[0], cultureInfo);
+        location.longitude = double.Parse(splittedLocationString[1], cultureInfo);
+        location.altitude = double.Parse(splittedLocationString[2], cultureInfo);
+        location.accuracy = double.Parse(splittedLocationString[3], cultureInfo);
+        location.bearing = double.Parse(splittedLocationString[4], cultureInfo);
+        location.speed = double.Parse(splittedLocationString[5], cultureInfo);
+        location.provider = splittedLocationString[6];
+        OnLocation?.Invoke(location);
+    }
+
+    private void OnLocationAvailability(string _locationAvailable)
+    {
+        bool isAvailable = Convert.ToBoolean(_locationAvailable);
+        OnAvailability?.Invoke(isAvailable);
     }
 
     private AndroidJavaObject GetAndroidActivity()
