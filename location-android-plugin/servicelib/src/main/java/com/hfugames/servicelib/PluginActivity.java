@@ -6,10 +6,14 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
-import android.os.Looper;
+import android.os.Handler;
+import android.os.Message;
+import android.os.Messenger;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
+
+import com.unity3d.player.UnityPlayer;
 import com.unity3d.player.UnityPlayerActivity;
 
 public class PluginActivity extends UnityPlayerActivity {
@@ -20,6 +24,7 @@ public class PluginActivity extends UnityPlayerActivity {
 
     private Intent currentIntent;
     private boolean isLocationServiceRunning;
+    public static Handler messageHandler = new MessageHandler();
 
 
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,7 +85,7 @@ public class PluginActivity extends UnityPlayerActivity {
                 }, REQUEST_CODE);
             } else {
                 currentIntent = new Intent(unityActivity, LocationService.class);
-                currentIntent.putExtra("UnityClassName", unityClassName);
+                currentIntent.putExtra("MESSENGER", new Messenger(messageHandler));
                 unityActivity.startService(currentIntent);
                 isLocationServiceRunning = true;
             }
@@ -105,6 +110,25 @@ public class PluginActivity extends UnityPlayerActivity {
     public void onBackPressed() {
         // instead of calling UnityPlayerActivity.onBackPressed() we just ignore the back button event
         // super.onBackPressed();
+    }
+
+    public static class MessageHandler extends Handler {
+        @Override
+        public void handleMessage(Message _message) {
+            try {
+                int type = _message.arg1;
+                Object msg = _message.obj;
+                switch(type) {
+                    case 0:
+                        // location message received
+                        Location newLocation = (Location)msg;
+                        UnityPlayer.UnitySendMessage(unityClassName, "OnLocationReceived", newLocation.getLatitude() + " : " + newLocation.getLongitude());
+                        break;
+                }
+            } catch(Exception _e) {
+                Log.e(TAG, _e.getMessage());
+            }
+        }
     }
 
     @Override

@@ -5,13 +5,13 @@ import android.app.Service;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.Message;
+import android.os.Messenger;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -19,15 +19,11 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
-import com.unity3d.player.UnityPlayer;
-
-import java.text.MessageFormat;
 
 public class LocationService extends Service {
 
     private static final String TAG = "LocationService";
-
-    private String unityClassName;
+    private Messenger messageHandler;
 
     private FusedLocationProviderClient fusedLocationProviderClient;
     private LocationRequest locationRequest;
@@ -47,7 +43,8 @@ public class LocationService extends Service {
     public int onStartCommand(Intent _intent, int _flags, int _startId) {
         try {
             Log.d(TAG, "Start location service...");
-            unityClassName = _intent.getStringExtra("UnityClassName");
+            Bundle extras = _intent.getExtras();
+            messageHandler = (Messenger) extras.get("MESSENGER");
 
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 return START_NOT_STICKY;
@@ -83,9 +80,7 @@ public class LocationService extends Service {
                 @Override
                 public void onLocationResult(LocationResult _locationResult) {
                     lastLocation = _locationResult.getLastLocation();
-                    String locationMsg = MessageFormat.format("Location received: Lat {0} Lng {1}.", lastLocation.getLatitude(), lastLocation.getLongitude());
-                    Log.d(TAG, locationMsg);
-                    UnityPlayer.UnitySendMessage(unityClassName, "OnLocationReceived", locationMsg);
+                    sendMessageToActivity(0, lastLocation);
                 }
             };
         } catch(Exception _e) {
@@ -100,5 +95,21 @@ public class LocationService extends Service {
         locationRequest.setInterval(5000);
         locationRequest.setFastestInterval(3000);
         locationRequest.setSmallestDisplacement(10);
+    }
+
+    private void sendMessageToActivity(int _type, Object _msg) {
+        try {
+            Message message = Message.obtain();
+            switch(_type) {
+                case 0:
+                    Location lastLocation = (Location)_msg;
+                    message.arg1 = _type;
+                    message.obj = lastLocation;
+                    messageHandler.send(message);
+                    break;
+            }
+        } catch(Exception _e) {
+            Log.e(TAG, _e.getMessage());
+        }
     }
 }
