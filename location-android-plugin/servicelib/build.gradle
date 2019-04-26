@@ -1,0 +1,58 @@
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion 28
+
+
+
+    defaultConfig {
+        minSdkVersion 16
+        targetSdkVersion 28
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    afterEvaluate {
+        assembleDebug.finalizedBy(exportJar)
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    // implementation 'com.google.android.gms:play-services-location:11.0.4'
+    implementation files('libs/play-services-location-11.0.4.jar')
+    implementation files('libs/support-annotations-26.1.0')
+    implementation files('libs/support-compat-26.1.0.jar')
+    implementation files('libs/support-core-ui-26.1.0.jar')
+    implementation files('libs/support-core-utils-26.1.0.jar')
+    implementation files('libs/support-fragment-26.1.0.jar')
+    implementation files('libs/support-media-compat-26.1.0.jar')
+    implementation files('libs/support-v4-26.1.0.jar')
+    implementation files('libs/play-services-basement-11.0.4.jar')
+    implementation files('libs/play-services-base-11.0.4.jar')
+    implementation files('libs/play-services-tasks-11.0.4.jar')
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+}
+
+task exportJar(type: Copy) {
+    from('build/intermediates/packaged-classes/debug/classes.jar')
+    include('classes.jar')
+    into('../../unity-project/Assets/Plugins/Android')
+    rename('classes.jar', 'servicePlugin.jar')
+}
+task deleteOldJar(type: Delete) {
+    delete '../../unity-project/Assets/Plugins/Android/servicePlugin.jar'
+}
+exportJar.dependsOn(deleteOldJar)
