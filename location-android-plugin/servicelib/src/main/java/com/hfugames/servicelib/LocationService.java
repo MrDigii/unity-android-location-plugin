@@ -51,12 +51,13 @@ public class LocationService extends Service {
     private Location lastLocation;
     NotificationManager notificationManager;
     Notification locationNotification;
+    NotificationCompat.Builder locationNotificationBuilder;
 
     private int interval;
     private int fastestInterval;
     private int smallestDisplacement;
     private boolean asForeground;
-
+    private Destination currentDestination;
 
     @Override
     public void onCreate() {
@@ -93,7 +94,8 @@ public class LocationService extends Service {
                         .build();
 
                 // create notification
-                locationNotification = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+                locationNotificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID);
+                locationNotification = locationNotificationBuilder
                         .setContentTitle("Location reached!")
                         .setContentText("You reached your destination!")
                         .setSmallIcon(res.getIdentifier(serviceNotificationIconName, "drawable", this.getPackageName()))
@@ -150,9 +152,25 @@ public class LocationService extends Service {
                 @Override
                 public void onLocationResult(LocationResult _locationResult) {
                     lastLocation = _locationResult.getLastLocation();
-
-                    notificationManager.notify(2, locationNotification);
                     sendMessageToActivity(0, lastLocation);
+
+                    // check if destination has been reached
+                    if (currentDestination != null) {
+                        Location destLocation = new Location("destLocation");
+                        destLocation.setLatitude(currentDestination.latitude);
+                        destLocation.setLongitude(currentDestination.longitude);
+
+                        double distance = lastLocation.distanceTo(destLocation);
+                        // Log.d(TAG, "Distance to destination: " + distance );
+                        sendMessageToActivity(2, distance);
+
+                        // check if device is in destinations triggerRadius
+                        if(distance <= currentDestination.triggerRadius) {
+                            locationNotificationBuilder.setContentText(currentDestination.destinationName);
+                            notificationManager.notify(2, locationNotificationBuilder.build());
+                            currentDestination = null;
+                        }
+                    }
                 }
 
                 @Override
@@ -190,9 +208,19 @@ public class LocationService extends Service {
                     message.obj = locationAvailable;
                     messageHandler.send(message);
                     break;
+                case 2:
+                    double distanceToDestination = (double)_msg;
+                    message.arg1 = _type;
+                    message.obj = distanceToDestination;
+                    messageHandler.send(message);
+                    break;
             }
         } catch(Exception _e) {
             Log.e(TAG, _e.getMessage());
         }
+    }
+
+    public void setNewDestination(Destination _newDestination) {
+        currentDestination = _newDestination;
     }
 }

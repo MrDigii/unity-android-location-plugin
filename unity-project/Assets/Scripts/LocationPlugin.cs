@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public struct Location
+public struct LocationData
 {
     public double latitude;
     public double longitude;
@@ -14,6 +14,14 @@ public struct Location
     public string provider;
 }
 
+public struct Destination
+{
+    public double latitude;
+    public double longitude;
+    public string destinationName;
+    public double triggerRadius;
+}
+
 public class LocationPlugin : MonoBehaviour
 {
     protected AndroidJavaObject pluginJavaClass;
@@ -21,10 +29,12 @@ public class LocationPlugin : MonoBehaviour
     protected AndroidJavaObject unityJavaActivity;
 
     // events
-    public delegate void LocationHandler(Location _location);
+    public delegate void LocationHandler(LocationData _location);
     public delegate void LocationAvailabilityHandler(bool _isAvailable);
+    public delegate void LocationDistanceHandler(double _distance);
     public event LocationHandler OnLocation;
     public event LocationAvailabilityHandler OnAvailability;
+    public event LocationDistanceHandler OnDistanceChanged;
 
     private void Awake()
     {
@@ -54,22 +64,17 @@ public class LocationPlugin : MonoBehaviour
         pluginJavaClass.Call("setUnityClassName", this.gameObject.name);
     }
 
-    public void OnStartLocationServiceBtn()
-    {
-        StartLocationService(5000, 3000, 10);
-    }
-
     public void StartLocationService(int _interval, int _fastestInterval, int _smallestDisplacement)
     {
-        StartLocationService(_interval, _fastestInterval, _smallestDisplacement, "ic_stat_my_location", "ic_stat_my_location");
+        StartLocationService(_interval, _fastestInterval, _smallestDisplacement, true, "ic_stat_my_location", "ic_stat_my_location");
     }
 
     /// <summary>
     /// Start google player location service
     /// </summary>
-    public void StartLocationService(int _interval, int _fastestInterval, int _smallestDisplacement, String _foregroundIcon, String _notificationIcon)
+    public void StartLocationService(int _interval, int _fastestInterval, int _smallestDisplacement, bool _asForeground, String _foregroundIcon, String _notificationIcon)
     {
-        GetPluginClass().Call("startLocationService", _interval, _fastestInterval, _smallestDisplacement, _foregroundIcon, _notificationIcon);
+        GetPluginClass().Call("startLocationService", _interval, _fastestInterval, _smallestDisplacement, _asForeground, _foregroundIcon, _notificationIcon);
     }
 
     /// <summary>
@@ -80,16 +85,26 @@ public class LocationPlugin : MonoBehaviour
         GetPluginClass().Call("stopLocationService");
     }
 
+    /// <summary>
+    /// Set new destination
+    /// Trigger radius of destination is in meters
+    /// </summary>
+    /// <param name="_dest"></param>
+    public void setDestination(Destination _dest)
+    {
+        GetPluginClass().Call("setDestination", _dest.latitude, _dest.longitude, _dest.destinationName, _dest.triggerRadius);
+    }
+
     public bool IsLocationServiceRunning()
     {
         return GetPluginClass().Call<bool>("isLocationServiceRunning");
     }
 
-    public Location LastLocation
+    public LocationData LastLocation
     {
         get
         {
-            Location lastLocation = new Location();
+            LocationData lastLocation = new LocationData();
             lastLocation.latitude = GetPluginClass().Call<double>("getLatitude");
             lastLocation.longitude = GetPluginClass().Call<double>("getLongitude");
             lastLocation.altitude = GetPluginClass().Call<double>("getAltitude");
@@ -123,7 +138,7 @@ public class LocationPlugin : MonoBehaviour
 
     private void OnLocationReceived(string _locationData)
     {
-        Location location = new Location();
+        LocationData location = new LocationData();
         System.Globalization.CultureInfo cultureInfo = System.Globalization.CultureInfo.InvariantCulture;
         string[] splittedLocationString = _locationData.Split(':');
         location.latitude = double.Parse(splittedLocationString[0], cultureInfo);
@@ -140,6 +155,13 @@ public class LocationPlugin : MonoBehaviour
     {
         bool isAvailable = Convert.ToBoolean(_locationAvailable);
         OnAvailability?.Invoke(isAvailable);
+    }
+
+    private void OnDistance(string _distanceToDestination)
+    {
+        System.Globalization.CultureInfo cultureInfo = System.Globalization.CultureInfo.InvariantCulture;
+        double distance = double.Parse(_distanceToDestination, cultureInfo);
+        OnDistanceChanged?.Invoke(distance);
     }
 
     private AndroidJavaObject GetAndroidActivity()

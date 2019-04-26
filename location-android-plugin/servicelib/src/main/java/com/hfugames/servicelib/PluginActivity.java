@@ -42,6 +42,8 @@ public class PluginActivity extends UnityPlayerActivity {
     private LocationService mService;
     private boolean mBound;
 
+    private Destination currentDestination;
+
     private Intent currentIntent;
     private boolean isLocationServiceRunning;
     public static Handler messageHandler = new MessageHandler();
@@ -117,7 +119,7 @@ public class PluginActivity extends UnityPlayerActivity {
         }
     }
 
-    public void startLocationService(int _interval, int _fastestInterval, int _smallestDisplacement, String _foregroundIcon, String _notificationIcon) {
+    public void startLocationService(int _interval, int _fastestInterval, int _smallestDisplacement, boolean _asForeground, String _foregroundIcon, String _notificationIcon) {
         try {
             if (isLocationServiceRunning) throw new Exception("Location Service already running!");
             if (unityActivity == null) throw new Exception("Undefined UnityActivity!");
@@ -132,7 +134,7 @@ public class PluginActivity extends UnityPlayerActivity {
                 currentIntent.putExtra(SMALLEST_DISPLACEMENT_EXTRA, _smallestDisplacement);
                 currentIntent.putExtra(INTERVAL_EXTRA, _interval);
                 currentIntent.putExtra(FASTEST_INTERVAL_EXTRA, _fastestInterval);
-                currentIntent.putExtra(INTENT_FOREGROUND_EXTRA, true);
+                currentIntent.putExtra(INTENT_FOREGROUND_EXTRA, _asForeground);
                 currentIntent.putExtra(INTENT_FOREGROUND_ICON_EXTRA, _foregroundIcon);
                 currentIntent.putExtra(INTENT_NOTIFICATION_ICON_EXTRA, _notificationIcon);
 
@@ -163,6 +165,19 @@ public class PluginActivity extends UnityPlayerActivity {
             unityActivity.stopService(currentIntent);
         }
         isLocationServiceRunning = false;
+    }
+
+    public void setDestination(double _latitude, double _longitude, String _destinationName, double _triggerRadius) {
+        Destination destination = new Destination();
+        destination.latitude = _latitude;
+        destination.longitude = _longitude;
+        destination.destinationName = _destinationName;
+        destination.triggerRadius = _triggerRadius;
+        Log.d(TAG, destination.latitude + "" + destination.longitude);
+        currentDestination = destination;
+        if (mBound) {
+            mService.setNewDestination(destination);
+        }
     }
 
     // get last location latitude from locationService
@@ -277,6 +292,11 @@ public class PluginActivity extends UnityPlayerActivity {
             LocationService.LocationBinder binder = (LocationService.LocationBinder) service;
             mService = binder.getService();
             mBound = true;
+            if (currentDestination != null) {
+                if (mBound) {
+                    mService.setNewDestination(currentDestination);
+                }
+            }
         }
 
         @Override
@@ -311,6 +331,11 @@ public class PluginActivity extends UnityPlayerActivity {
                         // location service availability changed
                         boolean locationSensorAvailable = (boolean)msg;
                         UnityPlayer.UnitySendMessage(unityClassName, "OnLocationAvailability", locationSensorAvailable + "");
+                        break;
+                    case 2:
+                        // location service availability changed
+                        double distanceToDestination = (double)msg;
+                        UnityPlayer.UnitySendMessage(unityClassName, "OnDistance", distanceToDestination + "");
                         break;
                 }
             } catch(Exception _e) {

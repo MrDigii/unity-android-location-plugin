@@ -21,6 +21,8 @@ public class ServiceManager : MonoBehaviour
     [SerializeField]
     private Text providerText;
     [SerializeField]
+    private Text distanceText;
+    [SerializeField]
     private Text locationAvailabilityText;
 
 
@@ -33,9 +35,22 @@ public class ServiceManager : MonoBehaviour
     {
         plugin.OnLocation += OnLocationReceived;
         plugin.OnAvailability += OnLocationAvailability;
+        plugin.OnDistanceChanged += OnDistanceChanged;
+
+        Destination destination = new Destination();
+        destination.destinationName = "Post";
+        destination.latitude = 47.984641;
+        destination.longitude = 8.815055;
+        destination.triggerRadius = 40;
+        plugin.setDestination(destination);
     }
 
-    private void OnLocationReceived(Location _location)
+    public void OnStartLocationServiceBtn()
+    {
+        plugin.StartLocationService(5000, 3000, 10);
+    }
+
+    private void OnLocationReceived(LocationData _location)
     {
         Debug.Log($"Lat: {_location.latitude} Lng: {_location.longitude} Alt: {_location.altitude}");
         WriteLocationToUI(_location);
@@ -46,6 +61,11 @@ public class ServiceManager : MonoBehaviour
         locationAvailabilityText.text = _isAvailable.ToString();
     }
 
+    private void OnDistanceChanged(double _distance)
+    {
+        distanceText.text = $"Distance to Dest: {_distance} m";
+    }
+
     private void OnApplicationPause(bool _isPaused)
     {
         if (!_isPaused)
@@ -54,7 +74,7 @@ public class ServiceManager : MonoBehaviour
         }
     }
 
-    private void WriteLocationToUI(Location _location)
+    private void WriteLocationToUI(LocationData _location)
     {
         latText.text = "Latitude: " + _location.latitude.ToString();
         lngText.text = "Longitude: " + _location.longitude.ToString();
