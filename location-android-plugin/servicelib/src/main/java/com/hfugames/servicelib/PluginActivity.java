@@ -2,12 +2,15 @@ package com.hfugames.servicelib;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -25,6 +28,16 @@ public class PluginActivity extends UnityPlayerActivity {
     private static final int REQUEST_CODE = 1000;
     private static Activity unityActivity;
     private static String unityClassName;
+
+    public static final String SERVICE_CHANNEL_ID = "ServiceChannel";
+    public static final String NOTIFICATION_CHANNEL_ID = "NotificationChannel";
+    public static final String INTENT_FOREGROUND_EXTRA = "startAsForeground";
+    public static final String INTENT_FOREGROUND_ICON_EXTRA = "foregroundIcon";
+    public static final String INTENT_NOTIFICATION_ICON_EXTRA = "notificationIcon";
+    public static final String MESSENGER_EXTRA = "messenger";
+    public static final String INTERVAL_EXTRA = "interval";
+    public static final String FASTEST_INTERVAL_EXTRA = "fastestInterval";
+    public static final String SMALLEST_DISPLACEMENT_EXTRA = "smallestDisplacement";
 
     private LocationService mService;
     private boolean mBound;
@@ -48,6 +61,7 @@ public class PluginActivity extends UnityPlayerActivity {
     private void initPlugin() {
         try {
             if (unityActivity == null) throw new Exception("Undefined UnityActivity!");
+            createNotificationChannels();
 
             if (ActivityCompat.shouldShowRequestPermissionRationale(unityActivity, Manifest.permission.ACCESS_FINE_LOCATION)) {
                 ActivityCompat.requestPermissions(unityActivity, new String[]{
@@ -61,6 +75,29 @@ public class PluginActivity extends UnityPlayerActivity {
 
     private void setUnityAcitvityContext(Activity _context) {
         unityActivity = _context;
+    }
+
+    // Set notification channel for API Level >= 26
+    public static void createNotificationChannels() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel serviceChannel = new NotificationChannel(
+                    SERVICE_CHANNEL_ID,
+                    "ServiceChannel",
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+            serviceChannel.setDescription("Notification Channel for Intent Service");
+
+            NotificationChannel notificationChannel = new NotificationChannel(
+                    NOTIFICATION_CHANNEL_ID,
+                    "NotificationChannel",
+                    NotificationManager.IMPORTANCE_LOW
+            );
+            notificationChannel.setDescription("Notification Channel for other Notifications");
+
+            NotificationManager manager = unityActivity.getSystemService(NotificationManager.class);
+            manager.createNotificationChannel(serviceChannel);
+            manager.createNotificationChannel(notificationChannel);
+        }
     }
 
     @Override
@@ -80,7 +117,7 @@ public class PluginActivity extends UnityPlayerActivity {
         }
     }
 
-    public void startLocationService(int _interval, int _fastestInterval, int _smallestDisplacement) {
+    public void startLocationService(int _interval, int _fastestInterval, int _smallestDisplacement, String _foregroundIcon, String _notificationIcon) {
         try {
             if (isLocationServiceRunning) throw new Exception("Location Service already running!");
             if (unityActivity == null) throw new Exception("Undefined UnityActivity!");
@@ -91,10 +128,13 @@ public class PluginActivity extends UnityPlayerActivity {
                 }, REQUEST_CODE);
             } else {
                 currentIntent = new Intent(unityActivity, LocationService.class);
-                currentIntent.putExtra("MESSENGER", new Messenger(messageHandler));
-                currentIntent.putExtra("INTERVAL", _interval);
-                currentIntent.putExtra("FASTEST_INTERVAL", _fastestInterval);
-                currentIntent.putExtra("SMALLEST_DISPLACEMENT", _smallestDisplacement);
+                currentIntent.putExtra(MESSENGER_EXTRA, new Messenger(messageHandler));
+                currentIntent.putExtra(SMALLEST_DISPLACEMENT_EXTRA, _smallestDisplacement);
+                currentIntent.putExtra(INTERVAL_EXTRA, _interval);
+                currentIntent.putExtra(FASTEST_INTERVAL_EXTRA, _fastestInterval);
+                currentIntent.putExtra(INTENT_FOREGROUND_EXTRA, true);
+                currentIntent.putExtra(INTENT_FOREGROUND_ICON_EXTRA, _foregroundIcon);
+                currentIntent.putExtra(INTENT_NOTIFICATION_ICON_EXTRA, _notificationIcon);
 
                 unityActivity.startService(currentIntent);
                 unityActivity.bindService(currentIntent, mConnection, Context.BIND_AUTO_CREATE);
@@ -117,12 +157,12 @@ public class PluginActivity extends UnityPlayerActivity {
 
     public void stopLocationService() {
         Log.d(TAG, "Stop location service...");
-        try {
-            if (currentIntent != null) unityActivity.stopService(currentIntent);
-            isLocationServiceRunning = false;
-        } catch (Exception _e) {
-            Log.e(TAG, _e.getMessage());
+
+        if (isLocationServiceRunning) {
+            unityActivity.unbindService(mConnection);
+            unityActivity.stopService(currentIntent);
         }
+        isLocationServiceRunning = false;
     }
 
     // get last location latitude from locationService

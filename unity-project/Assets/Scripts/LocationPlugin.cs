@@ -59,12 +59,17 @@ public class LocationPlugin : MonoBehaviour
         StartLocationService(5000, 3000, 10);
     }
 
+    public void StartLocationService(int _interval, int _fastestInterval, int _smallestDisplacement)
+    {
+        StartLocationService(_interval, _fastestInterval, _smallestDisplacement, "ic_stat_my_location", "ic_stat_my_location");
+    }
+
     /// <summary>
     /// Start google player location service
     /// </summary>
-    public void StartLocationService(int _interval, int _fastestInterval, int _smallestDisplacement)
+    public void StartLocationService(int _interval, int _fastestInterval, int _smallestDisplacement, String _foregroundIcon, String _notificationIcon)
     {
-        GetPluginClass().Call("startLocationService", _interval, _fastestInterval, _smallestDisplacement);
+        GetPluginClass().Call("startLocationService", _interval, _fastestInterval, _smallestDisplacement, _foregroundIcon, _notificationIcon);
     }
 
     /// <summary>

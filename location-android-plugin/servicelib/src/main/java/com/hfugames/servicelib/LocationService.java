@@ -1,10 +1,16 @@
 package com.hfugames.servicelib;
 
 import android.Manifest;
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
+import android.graphics.Color;
 import android.location.Location;
+import android.location.LocationManager;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -13,6 +19,7 @@ import android.os.Message;
 import android.os.Messenger;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -21,6 +28,16 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+
+import static com.hfugames.servicelib.PluginActivity.FASTEST_INTERVAL_EXTRA;
+import static com.hfugames.servicelib.PluginActivity.INTENT_FOREGROUND_EXTRA;
+import static com.hfugames.servicelib.PluginActivity.INTENT_FOREGROUND_ICON_EXTRA;
+import static com.hfugames.servicelib.PluginActivity.INTENT_NOTIFICATION_ICON_EXTRA;
+import static com.hfugames.servicelib.PluginActivity.INTERVAL_EXTRA;
+import static com.hfugames.servicelib.PluginActivity.MESSENGER_EXTRA;
+import static com.hfugames.servicelib.PluginActivity.NOTIFICATION_CHANNEL_ID;
+import static com.hfugames.servicelib.PluginActivity.SERVICE_CHANNEL_ID;
+import static com.hfugames.servicelib.PluginActivity.SMALLEST_DISPLACEMENT_EXTRA;
 
 public class LocationService extends Service {
 
@@ -32,9 +49,13 @@ public class LocationService extends Service {
     private LocationRequest locationRequest;
     private LocationCallback locationCallback;
     private Location lastLocation;
+    NotificationManager notificationManager;
+    Notification locationNotification;
+
     private int interval;
     private int fastestInterval;
     private int smallestDisplacement;
+    private boolean asForeground;
 
 
     @Override
@@ -42,6 +63,7 @@ public class LocationService extends Service {
         super.onCreate();
         buildLocationRequest();
         buildLocationCallback();
+        notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
     }
 
@@ -50,10 +72,40 @@ public class LocationService extends Service {
         try {
             Log.d(TAG, "Start location service...");
             Bundle extras = _intent.getExtras();
-            messageHandler = (Messenger) extras.get("MESSENGER");
-            interval = (int) extras.get("INTERVAL");
-            fastestInterval = (int) extras.get("FASTEST_INTERVAL");
-            smallestDisplacement = (int) extras.get("SMALLEST_DISPLACEMENT");
+            messageHandler = (Messenger) extras.get(MESSENGER_EXTRA);
+            interval = (int) extras.get(INTERVAL_EXTRA);
+            fastestInterval = (int) extras.get(FASTEST_INTERVAL_EXTRA);
+            smallestDisplacement = (int) extras.get(SMALLEST_DISPLACEMENT_EXTRA);
+            asForeground = (boolean) extras.get(INTENT_FOREGROUND_EXTRA);
+            String serviceServiceIconName = (String) extras.get(INTENT_FOREGROUND_ICON_EXTRA);
+            String serviceNotificationIconName = (String) extras.get(INTENT_NOTIFICATION_ICON_EXTRA);
+
+            Resources res = this.getResources();
+
+            if (asForeground) {
+                // create notification
+                Notification notification = new NotificationCompat.Builder(this, SERVICE_CHANNEL_ID)
+                        .setContentTitle("Location Service")
+                        .setContentText("Service Running...")
+                        .setSmallIcon(res.getIdentifier(serviceServiceIconName, "drawable", this.getPackageName()))
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                        .build();
+
+                // create notification
+                locationNotification = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+                        .setContentTitle("Location reached!")
+                        .setContentText("You reached your destination!")
+                        .setSmallIcon(res.getIdentifier(serviceNotificationIconName, "drawable", this.getPackageName()))
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                        .setVibrate(new long[] { 1000, 1000, 1000, 1000, 1000 })
+                        .setLights(Color.GREEN, 3000, 3000)
+                        .build();
+
+                // start as foreground service
+                startForeground(1, notification);
+            }
 
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 return START_NOT_STICKY;
@@ -68,12 +120,11 @@ public class LocationService extends Service {
     @Override
     public void onDestroy()
     {
-        try {
-            fusedLocationProviderClient.removeLocationUpdates(locationCallback);
-        } catch (Exception _e) {
-            Log.e(TAG, _e.getMessage());
-        }
+        super.onDestroy();
         Log.d(TAG, "onDestroy");
+
+        if (asForeground) stopForeground(true);
+        fusedLocationProviderClient.removeLocationUpdates(locationCallback);
     }
 
     @Nullable
@@ -99,6 +150,8 @@ public class LocationService extends Service {
                 @Override
                 public void onLocationResult(LocationResult _locationResult) {
                     lastLocation = _locationResult.getLastLocation();
+
+                    notificationManager.notify(2, locationNotification);
                     sendMessageToActivity(0, lastLocation);
                 }
 
