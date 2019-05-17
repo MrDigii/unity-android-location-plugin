@@ -82,6 +82,6 @@ public class ServiceManager : MonoBehaviour
         accuracyText.text = "Accuracy: " + (plugin.HasAccuracy() ? _location.accuracy.ToString() : "-");
         bearingText.text = "Bearing: " + (plugin.HasBearing() ? _location.bearing.ToString() : "-");
         speedText.text = "Speed: " + (plugin.HasSpeed() ? _location.speed.ToString() : "-");
-        providerText.text = "Provider: " + _location.provider.ToString();
+        providerText.text = "Provider: " + (_location.provider != null ? _location.provider.ToString() : "-");
     }
 }

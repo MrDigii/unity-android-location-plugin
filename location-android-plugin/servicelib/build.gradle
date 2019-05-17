@@ -49,10 +49,10 @@ dependencies {
 task exportJar(type: Copy) {
     from('build/intermediates/packaged-classes/debug/classes.jar')
     include('classes.jar')
-    into('../../unity-project/Assets/Plugins/Android')
+    into('../../unity-lobalarp-project/Assets/Plugins/Android')
     rename('classes.jar', 'servicePlugin.jar')
 }
 task deleteOldJar(type: Delete) {
-    delete '../../unity-project/Assets/Plugins/Android/servicePlugin.jar'
+    delete '../../unity-lobalarp-project/Assets/Plugins/Android/servicePlugin.jar'
 }
 exportJar.dependsOn(deleteOldJar)
